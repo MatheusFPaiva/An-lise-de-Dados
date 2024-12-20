@@ -1,0 +1,324 @@
+import numpy as np
+import uproot
+import awkward as ak
+import matplotlib.pyplot as plt
+import vector
+import glob
+
+# Lista de caminhos para os arquivos ROOT
+caminho = '/opendata/eos/opendata/cms/Run2016G/DoubleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v2/2430000/'
+
+paths = glob.glob(caminho + '*.root')
+
+# Carregando os ramos relevantes da árvore 'Events' de todos os arquivos
+tree_name = "Events"
+branches = ["Muon_pt", "Muon_phi", "Muon_eta", "Muon_mass","nMuon","Muon_charge","Electron_pt","Electron_eta","Electron_phi","Electron_mass","nElectron","Electron_charge"]
+
+# Concatenar os ramos de múltiplos arquivos
+data = uproot.concatenate(
+    [f"{path}:{tree_name}" for path in paths],
+    filter_name=branches,
+    library="ak"
+)
+
+# Acessar ramos dos muons
+muon_pt = data["Muon_pt"]
+muon_phi = data["Muon_phi"]
+muon_eta = data["Muon_eta"]
+muon_mass = data["Muon_mass"]
+muon_charge = data["Muon_charge"]
+nMuon = data["nMuon"]
+
+# Seleção dos muons
+muon_n_val = nMuon >= 2  # Pelo menos 2 muons no evento
+
+# Máscaras de seleção
+mask_muon1 = (muon_pt[muon_n_val][:, 0] > 20) & (np.abs(muon_eta[muon_n_val][:, 0]) < 2.5)
+mask_muon2 = (muon_pt[muon_n_val][:, 1] > 20) & (np.abs(muon_eta[muon_n_val][:, 1]) < 2.5)
+mask_muon3 =  ((muon_charge[muon_n_val][:, 0] * muon_charge[muon_n_val][:, 1]) < 0)
+# Corte de massa do Z para o par de múons
+mask_muon_comb = mask_muon1 & mask_muon2 & mask_muon3
+
+# Aplicar máscaras para selecionar os muons
+muon_pt_sel = muon_pt[muon_n_val][mask_muon_comb]
+muon_eta_sel = muon_eta[muon_n_val][mask_muon_comb]
+muon_phi_sel = muon_phi[muon_n_val][mask_muon_comb]
+muon_mass_sel = muon_mass[muon_n_val][mask_muon_comb]
+
+print("Eventos com seleção aplicada:")
+print(f"Muon_pt: {muon_pt_sel}")
+print(f"Muon_eta: {muon_eta_sel}")
+print(f"Muon_phi: {muon_phi_sel}")
+## Limpar ##
+
+muon_pt_clean = muon_pt_sel[ak.num(muon_pt_sel) > 0]
+muon_eta_clean = muon_eta_sel[ak.num(muon_eta_sel) > 0]
+muon_phi_clean = muon_phi_sel[ak.num(muon_phi_sel) > 0]
+muon_mass_clean = muon_mass_sel[ak.num(muon_mass_sel) > 0]
+# Mudando para plot
+
+muon_pt_flat = ak.flatten(muon_pt_clean)
+muon_eta_flat = ak.flatten(muon_eta_clean)
+muon_phi_flat = ak.flatten(muon_phi_clean)
+muon_mass_flat = ak.flatten(muon_mass_clean)
+# Antes do corte
+
+muon_pt_before_cut = data["Muon_pt"]
+muon_pt_before_cut_clean = muon_pt_before_cut[ak.num(muon_pt_before_cut) > 0]
+muon_pt_before = ak.flatten(muon_pt_before_cut_clean)
+
+muon_phi_before_cut = data['Muon_phi']
+muon_phi_before_cut_clean = muon_phi_before_cut[ak.num(muon_phi_before_cut) > 0]
+muon_phi_before = ak.flatten(muon_phi_before_cut_clean)
+
+muon_eta_before_cut = data['Muon_eta']
+muon_eta_before_cut_clean = muon_eta_before_cut[ak.num(muon_eta_before_cut) > 0]
+muon_eta_before = ak.flatten(muon_eta_before_cut_clean)
+#Pt Muon grafico
+
+
+plt.figure(figsize=(10, 6))
+
+# Plota o histograma antes do corte
+plt.hist(muon_pt_before, bins=50, color='#7a21dd', range=(0, 1000), label="Antes do corte")
+
+# Plota o histograma depois do corte no mesmo eixo
+plt.hist(muon_pt_flat, bins=50, color='orange', range=(0, 1000), label="Depois do corte")
+
+# Configurações do gráfico
+plt.yscale('log')  # Define escala logarítmica no eixo y
+plt.title(r"Distribuição de $p_T$ antes e depois do corte do Muon")
+plt.xlabel(r"$p_{T}$ [GeV/\(c/\]")
+plt.ylabel("Eventos")
+plt.legend(loc='best')  # Adiciona a legenda para diferenciar os conjuntos de dados
+
+
+plt.tight_layout()
+plt.show()
+#eta Muon antes e depois do corte
+
+plt.figure(figsize=(10, 6))
+
+# Plota o primeiro histograma (antes do corte)
+plt.hist(muon_eta_before, bins=200, color='royalblue', alpha=0.8, range=(-2, 2), label="Antes do corte")
+
+# Plota o segundo histograma (depois do corte) no mesmo eixo
+plt.hist(muon_eta_flat, bins=200, color='orange', alpha=0.8, range=(-2, 2), label="Depois do corte")
+
+# Configurações do gráfico
+plt.title("Distribuição de $\eta$ antes e depois do corte do Múon")
+plt.xlabel(r"$\eta$")
+plt.ylabel("Eventos")
+plt.legend(loc='best')  # Adiciona legenda para diferenciar os conjuntos de dados
+
+
+plt.tight_layout()
+plt.show()
+#grafico Phi muon
+
+plt.figure(figsize=(10, 6))
+
+# Plota o primeiro histograma
+plt.hist(muon_phi_before, bins=500, color='blue', alpha=0.6, range=(-4, 4), label="Antes do corte")
+
+# Plota o segundo histograma no mesmo eixo
+plt.hist(muon_phi_flat, bins=500, color='red', alpha=0.6, range=(-4, 4), label="Depois do corte")
+
+# Configurações do gráfico
+plt.title("Distribuição de $\phi$ antes e depois do corte do Muon")
+plt.xlabel(r"$\phi$ [rad]")
+plt.ylabel("Eventos")
+plt.legend(loc='best')  # Mostra a legenda para diferenciar os histogramas
+
+
+plt.tight_layout()
+plt.show()
+# Verificar se há eventos válidos após a seleção
+if len(muon_pt_sel) == 0:
+    raise ValueError("Nenhum evento satisfa os critérios de seleção.")
+
+# Construir vetores 4D para os dois muons
+muon1_4vecs = vector.zip({
+    "pt": muon_pt_sel[:, 0],
+    "eta": muon_eta_sel[:, 0],
+    "phi": muon_phi_sel[:, 0],
+    "mass": muon_mass_sel[:, 0]
+})
+
+muon2_4vecs = vector.zip({
+    "pt": muon_pt_sel[:, 1],
+    "eta": muon_eta_sel[:, 1],
+    "phi": muon_phi_sel[:, 1],
+    "mass": muon_mass_sel[:, 1]
+})
+
+# Calcular a massa invariante do sistema dimuon
+dimuon = muon1_4vecs + muon2_4vecs
+mass_dimuon = dimuon.mass
+
+# Aplicar corte na massa invariante
+mass_z_min = 70
+mass_z_max = 110
+mask_dimuon_mass = (mass_dimuon > mass_z_min) & (mass_dimuon < mass_z_max)
+
+# Selecionar massas invariante dentro do corte
+mass_dimuon_sel = mass_dimuon[mask_dimuon_mass]
+#### Eletron ######
+
+electron_pt = data["Electron_pt"]
+electron_eta = data["Electron_eta"]
+electron_phi = data["Electron_phi"]
+electron_mass = data["Electron_mass"]
+nelectron = data["nElectron"]
+electron_charge = data["Electron_charge"]
+
+
+valid_electron_pt = nelectron >= 2
+
+#primeiro eletron
+mask_electron_pt = electron_pt[valid_electron_pt][:, 0] > 20
+mask_electron_eta = np.abs(electron_eta[valid_electron_pt][:, 0]) < 2.5
+
+#segundo eletron
+mask_electron_pt2 = electron_pt[valid_electron_pt][:, 1] > 20
+mask_electron_eta2 = np.abs(electron_eta[valid_electron_pt][:, 1]) < 2.5
+
+mask_electron3 =  (electron_charge[valid_electron_pt][:, 0] * electron_charge[valid_electron_pt][:, 1]) < 0
+
+
+#combinação
+mask_electron_combined = mask_electron_pt & mask_electron_eta & mask_electron_pt2 & mask_electron_eta2 & mask_electron3
+
+
+#selecionando os eletrons filtrados
+electron_pt_sel = electron_pt[valid_electron_pt][mask_electron_combined]
+electron_eta_sel = electron_eta[valid_electron_pt][mask_electron_combined]
+electron_phi_sel = electron_phi[valid_electron_pt][mask_electron_combined]
+electron_mass_sel = electron_mass[valid_electron_pt][mask_electron_combined]
+
+
+#limpando os dados
+electron_pt_clean = electron_pt_sel[ak.num(electron_pt_sel) > 0]
+electron_eta_clean = electron_eta_sel[ak.num(electron_eta_sel) > 0]
+electron_phi_clean = electron_phi_sel[ak.num(electron_phi_sel) > 0]
+electron_mass_clean = electron_mass_sel[ak.num(electron_mass_sel) > 0]
+#transformar em 1D
+electron_pt_flat = ak.flatten(electron_pt_clean)
+electron_eta_flat = ak.flatten(electron_eta_clean)
+electron_phi_flat = ak.flatten(electron_phi_clean)
+electron_mass_flat = ak.flatten(electron_mass_clean)
+#fazendo virar vetor
+
+electron1_4vecs = vector.zip({
+    "pt": electron_pt_clean[:, 0],
+    "eta": electron_eta_clean[:, 0],
+    "phi": electron_phi_clean[:, 0],
+    "mass": electron_mass_clean[:, 0]
+})
+
+electron2_4vecs = vector.zip({
+    "pt": electron_pt_clean[:, 1],
+    "eta": electron_eta_clean[:, 1],
+    "phi": electron_phi_clean[:, 1],
+    "mass": electron_mass_clean[:, 1]
+})
+
+dielectron = electron1_4vecs + electron2_4vecs
+mass_dielectron = dielectron.mass
+
+# Aplicar corte na massa invariante
+mass_z_min = 70
+mass_z_max = 110
+mask_dielectron_mass = (mass_dielectron > mass_z_min) & (mass_dielectron < mass_z_max)
+
+# Selecionar massas invariante dentro do corte
+mass_dielectron_sel = mass_dielectron[mask_dielectron_mass]
+#antes do corte
+
+electron_pt_before_cut = data['Electron_pt']
+electron_pt_before_cut_clean = electron_pt_before_cut[ak.num(electron_pt_before_cut) > 0]
+electron_pt_before = ak.flatten(electron_pt_before_cut_clean)
+
+electron_eta_before_cut = data['Electron_eta']
+electron_eta_before_cut_clean = electron_eta_before_cut[ak.num(electron_eta_before_cut) > 0]
+electron_eta_before = ak.flatten(electron_eta_before_cut_clean)
+### PT eletron
+
+plt.figure(figsize=(10, 6))
+
+# Plota o histograma antes do corte
+plt.hist(electron_pt_before, bins=50, color='#92dadd', alpha=0.6, range=(0, 600), label="Antes do corte")
+
+# Plota o histograma depois do corte no mesmo eixo
+plt.hist(electron_pt_flat, bins=50, color='orange', alpha=0.6, range=(0, 600), label="Depois do corte")
+
+# Configurações do gráfico
+plt.yscale('log')  # Define escala logarítmica no eixo y
+plt.title(r"Distribuição de $p_T$ antes e depois do corte do Elétron")
+plt.xlabel(r"$p_T$ [GeV/\(c/\]")
+plt.ylabel("Eventos")
+plt.legend(loc='best')  # Adiciona a legenda para diferenciar os conjuntos de dados
+
+
+plt.tight_layout()
+plt.show()
+### Eta eletron
+
+
+plt.figure(figsize=(10, 6))
+
+# Plota o histograma antes do corte
+plt.hist(electron_eta_before, bins=50, color='#f89c20', alpha=0.6, range=(-2, 2), label="Antes do corte")
+
+# Plota o histograma depois do corte no mesmo eixo
+plt.hist(electron_eta_flat, bins=50, color='blue', alpha=0.6, range=(-2, 2), label="Depois do corte")
+
+# Configurações do gráfico
+plt.title("Distribuição de $eta$ antes e depois do corte do Elétron")
+plt.xlabel(r"$\eta$ ")
+plt.ylabel("Eventos")
+plt.legend(loc='best')  # Adiciona a legenda para identificar os conjuntos de dados
+
+
+plt.tight_layout()
+plt.show()
+## massa invariante do eletron e do muon separada
+
+
+plt.figure(figsize=(10, 5))
+
+# Plot de cada variável
+plt.hist(mass_dimuon, bins=100, color='#3f90da', alpha=0.7, label='Muon', histtype='step', range = (0,200))
+plt.hist(mass_dielectron, bins=50, color='#bd1f01', alpha=0.7, label='Eletron', histtype='step', range = (0,200))
+
+# Configurações do gráfico
+plt.title("Distribuições das Massas")
+plt.xlabel(r"Massa (GeV/c$^2$)")
+plt.ylabel("Events")
+plt.legend(loc='best')
+plt.grid(alpha=0.3)
+# plt.savefig("mass.png", dpi=300)
+plt.show()
+
+# Soma dos quadrivetores de dimuon e dielectron
+min_size = min(len(dimuon), len(dielectron))
+dimuon = dimuon[:min_size]
+dielectron = dielectron[:min_size]
+
+combined_4vecs = dimuon + dielectron
+masst = combined_4vecs.mass
+
+plt.figure(figsize=(10, 5))
+
+# Plot de cada variável
+plt.hist(masst, bins=100, color='#3f90da', alpha=0.7, label='Massa do e$e^-$ + $\mu\mu^-$', histtype='step', range = (0,300))
+
+
+# Configurações do gráfico
+plt.title("Distribuição da soma das massas")
+plt.xlabel(r"Massa (GeV/c$^2$)")
+plt.ylabel("Events")
+plt.legend(loc='best')
+plt.grid(alpha=0.3)
+# plt.savefig("mass.png", dpi=300)
+plt.show()
