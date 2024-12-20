@@ -10,6 +10,8 @@ caminho = '/opendata/eos/opendata/cms/Run2016G/DoubleMuon/NANOAOD/UL2016_MiniAOD
 
 paths = glob.glob(caminho + '*.root')
 
+#Caminho usado para MC: /opendata/eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZZTo4L_TuneCP5_13TeV_powheg_pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/2430000/
+
 # Carregando os ramos relevantes da árvore 'Events' de todos os arquivos
 tree_name = "Events"
 branches = ["Muon_pt", "Muon_phi", "Muon_eta", "Muon_mass","nMuon","Muon_charge","Electron_pt","Electron_eta","Electron_phi","Electron_mass","nElectron","Electron_charge"]
